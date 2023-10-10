@@ -37,7 +37,8 @@ module.exports = {
     'no-mixed-operators': 'off',
     'no-nested-ternary': 'off',
     'quote-props': 'off',
-    // 'arrow-body-style': 'off',
-    // 'array-callback-return': 'off',
+    'import/prefer-default-export': 'off',
+    'no-shadow': 'off',
+    'vue/no-setup-props-destructure': 'off',
   },
 };

@@ -1,4 +1,6 @@
 <script>
+import filters from '@/utils/filters';
+
 export default {
   props: {
     rates: {
@@ -15,6 +17,10 @@ export default {
       default: () => ([]),
     },
   },
+  setup() {
+    const headers = ['Валюта', 'Курс', 'Дата'];
+    return { headers, filters };
+  },
 };
 </script>
 
@@ -27,18 +33,18 @@ export default {
         </div>
         <table>
           <thead>
-          <tr>
-            <th>Валюта</th>
-            <th>Курс</th>
-            <th>Дата</th>
-          </tr>
+            <tr>
+              <th v-for="(header,index) in headers" :key="index">
+                {{ header }}
+              </th>
+            </tr>
           </thead>
 
           <tbody>
           <tr v-for="code in currencyCodes" :key="code">
             <td>{{ code }}</td>
             <td>{{ rates[code] }}</td>
-            <td>{{ $filters.dateFormatter(date) }}</td>
+            <td>{{ filters.dateFormatter(date) }}</td>
           </tr>
           </tbody>
         </table>

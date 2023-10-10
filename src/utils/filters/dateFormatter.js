@@ -1,4 +1,4 @@
-function dateFormatter(value, format = 'date') {
+export function dateFormatter(value, format = 'date') {
   const options = {};
 
   // Определение формата value
@@ -25,5 +25,3 @@ function dateFormatter(value, format = 'date') {
 
   return date.toLocaleString('ru-RU', options);
 }
-
-export default dateFormatter;

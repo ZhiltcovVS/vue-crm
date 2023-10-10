@@ -1,47 +1,62 @@
 <script>
+import { ref, computed, onMounted } from 'vue';
 import { useVuelidate } from '@vuelidate/core';
 import { required, email, minLength } from '@vuelidate/validators';
 import messages from '@/utils/messages';
-import { mapActions } from 'vuex';
+import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'vue-router';
+import { useModal } from '@/hooks/useModal';
 
 export default {
-  name: 'LoginView',
   setup() {
-    return { v$: useVuelidate() };
-  },
-  data: () => ({
-    password: '',
-    email: '',
-  }),
-  validations() {
-    return {
-      password: { required, minLength: minLength(6) },
-      email: { required, email },
-    };
-  },
-  mounted() {
-    if (messages[this.$route.query.message]) {
-      this.$message(messages[this.$route.query.message]);
-    }
-  },
-  methods: {
-    ...mapActions(['login']),
-    async onSubmit() {
-      if (this.v$.$invalid) {
-        this.v$.$touch();
+    const { showMessageModal } = useModal();
+    const { login } = useAuth();
+    const router = useRouter();
+
+    const password = ref('');
+    const emailText = ref('');
+
+    const passwordLength = ref(6);
+    const rules = computed(() => ({
+      password: {
+        required,
+        minLength: minLength(passwordLength.value),
+      },
+      emailText: {
+        required,
+        email,
+      },
+    }));
+    const v$ = useVuelidate(rules, { password, emailText });
+
+    const onSubmit = async () => {
+      if (v$.value.$invalid) {
+        v$.value.$touch();
         return;
       }
 
       const formData = {
-        email: this.email,
-        password: this.password,
+        email: emailText.value,
+        password: password.value,
       };
 
-      try {
-        await this.login(formData);
-        this.$router.push('/');
-      } catch (e) {}
-    },
+      await login(formData);
+      router.push('/');
+    };
+
+    onMounted(() => {
+      if (messages[router.currentRoute.value.query.message]) {
+        showMessageModal(messages[router.currentRoute.value.query.message]);
+      }
+    });
+
+    return {
+      password,
+      emailText,
+      login,
+      onSubmit,
+      v$,
+    };
   },
 };
 </script>
@@ -53,20 +68,20 @@ export default {
     <span class="card-title">Домашняя бухгалтерия</span>
     <div class="input-field">
       <input
-          id="email"
+          id="emailText"
           type="text"
-          v-model.trim="email"
+          v-model.trim="emailText"
       >
-      <label for="email">Email</label>
+      <label for="emailText">Email</label>
       <small
         class="helper-text invalid"
-        v-if="v$.email.$dirty && v$.email.email.$invalid"
+        v-if="v$.emailText.$dirty && v$.emailText.email.$invalid"
         >
           Введите корректный email
       </small>
       <small
         class="helper-text invalid"
-        v-else-if="v$.email.$dirty && v$.email.required.$invalid"
+        v-else-if="v$.emailText.$dirty && v$.emailText.required.$invalid"
         >
           Введите email
       </small>

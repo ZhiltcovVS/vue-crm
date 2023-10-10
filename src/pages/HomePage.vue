@@ -1,33 +1,30 @@
 <script>
+import { ref, onMounted } from 'vue';
 import HomeBill from '@/components/HomeBill';
 import HomeCurrency from '@/components/HomeCurrency';
-import { mapGetters, mapActions } from 'vuex';
+import { useCurrency } from '@/hooks/useCurrency';
 
 export default {
-  name: 'HomeView',
-  data: () => ({
-    loading: true,
-  }),
-  computed: {
-    ...mapGetters(['currencyCodes', 'currencyRates', 'currentUserInfo']),
-  },
-  methods: {
-    ...mapActions(['fetchCurrency', 'homeDataRefresh']),
-    async onHomeDataRefreshButton() {
-      this.loading = true;
-      await this.fetchCurrency();
-      this.loading = false;
-    },
-  },
   components: {
     HomeBill, HomeCurrency,
   },
-  async mounted() {
-    try {
-      await this.fetchCurrency();
-    } catch (e) {} finally {
-      this.loading = false;
-    }
+  setup() {
+    const { currencyRates, currencyCodes, fetchCurrency } = useCurrency();
+
+    const loading = ref(true);
+
+    const onHomeDataRefreshButton = async () => {
+      loading.value = true;
+      await fetchCurrency();
+      loading.value = false;
+    };
+
+    onMounted(async () => {
+      await fetchCurrency();
+      loading.value = false;
+    });
+
+    return { currencyRates, currencyCodes, loading, onHomeDataRefreshButton };
   },
 };
 </script>

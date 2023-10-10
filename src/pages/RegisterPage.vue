@@ -1,44 +1,60 @@
 <script>
+import { ref, computed } from 'vue';
 import { useVuelidate } from '@vuelidate/core';
 import { required, email, minLength } from '@vuelidate/validators';
-import { mapActions } from 'vuex';
+import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'vue-router';
 
 export default {
   setup() {
-    return { v$: useVuelidate() };
-  },
-  name: 'register',
-  data: () => ({
-    email: '',
-    password: '',
-    name: '',
-    agree: false,
-  }),
-  validations: {
-    password: { required, minLength: minLength(6) },
-    email: { required, email },
-    name: { required },
-    agree: { checked: (v) => v },
-  },
-  methods: {
-    ...mapActions(['register']),
-    async onSubmit() {
-      if (this.v$.$invalid) {
-        this.v$.$touch();
+    const { register } = useAuth();
+    const router = useRouter();
+
+    const emailText = ref('');
+    const password = ref('');
+    const name = ref('');
+    const agree = ref(false);
+
+    const passwordLength = ref(6);
+    const rules = computed(() => ({
+      password: {
+        required,
+        minLength: minLength(passwordLength.value),
+      },
+      emailText: {
+        required,
+        email,
+      },
+      name: { required },
+      agree: { checked: (v) => v },
+    }));
+    const v$ = useVuelidate(rules, { password, emailText, name, agree });
+
+    const onSubmit = async () => {
+      if (v$.value.$invalid) {
+        v$.value.$touch();
         return;
       }
 
       const formData = {
-        email: this.email,
-        password: this.password,
-        name: this.name,
+        email: emailText.value,
+        password: password.value,
+        name: name.value,
       };
 
-      try {
-        await this.register(formData);
-        this.$router.push('/');
-      } catch (e) {}
-    },
+      await register(formData);
+      router.push('/');
+    };
+
+    return {
+      emailText,
+      password,
+      name,
+      agree,
+      onSubmit,
+      register,
+      v$,
+    };
   },
 };
 </script>
@@ -50,20 +66,20 @@ export default {
         <span class="card-title">Домашняя бухгалтерия</span>
         <div class="input-field">
       <input
-          id="email"
+          id="emailText"
           type="text"
-          v-model.trim="email"
+          v-model.trim="emailText"
       >
-      <label for="email">Email</label>
+      <label for="emailText">Email</label>
       <small
         class="helper-text invalid"
-        v-if="v$.email.$dirty && v$.email.email.$invalid"
+        v-if="v$.emailText.$dirty && v$.emailText.email.$invalid"
         >
           Введите корректный email
       </small>
       <small
         class="helper-text invalid"
-        v-else-if="v$.email.$dirty && v$.email.required.$invalid"
+        v-else-if="v$.emailText.$dirty && v$.emailText.required.$invalid"
         >
           Введите email
       </small>

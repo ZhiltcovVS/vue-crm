@@ -1,46 +1,53 @@
 <script>
+import { ref, computed } from 'vue';
 import { useVuelidate } from '@vuelidate/core';
 import { required, minValue } from '@vuelidate/validators';
-import { mapActions } from 'vuex';
+import { useCategory } from '@/hooks/useCategory';
+import { useModal } from '@/hooks/useModal';
 
 export default {
-  setup() {
-    return { v$: useVuelidate() };
-  },
-  data: () => ({
-    categoryName: '',
-    limit: null,
-  }),
-  validations() {
-    return {
+  emits: ['addCategory'],
+  setup(props, { emit }) {
+    const { addCategory } = useCategory();
+    const { showMessageModal } = useModal();
+
+    const categoryName = ref('');
+    const limit = ref(null);
+
+    const limitMin = ref(100);
+    const rules = computed(() => ({
       categoryName: { required },
-      limit: { minValue: minValue(100) },
-    };
-  },
-  methods: {
-    ...mapActions(['addCategory']),
-    async onSubmitCreateCategory() {
-      if (this.v$.$invalid) {
-        this.v$.$touch();
+      limit: { minValue: minValue(limitMin.value) },
+    }));
+    const v$ = useVuelidate(rules, { categoryName, limit });
+
+    const onSubmitCreateCategory = async () => {
+      if (v$.value.$invalid) {
+        v$.value.$touch();
         return;
       }
 
-      try {
-        const newCategoryData = {
-          name: this.categoryName,
-          limit: this.limit,
-        };
+      const newCategoryData = {
+        name: categoryName.value,
+        limit: limit.value,
+      };
 
-        await this.addCategory(newCategoryData);
+      await addCategory(newCategoryData);
 
-        this.categoryName = '';
-        this.limit = null;
+      categoryName.value = '';
+      limit.value = null;
 
-        this.$emit('addCategory');
+      emit('addCategory');
 
-        this.$message('Категория создана');
-      } catch (e) {}
-    },
+      showMessageModal('Категория создана');
+    };
+
+    return {
+      categoryName,
+      limit,
+      onSubmitCreateCategory,
+      v$,
+    };
   },
 };
 </script>
@@ -52,7 +59,7 @@ export default {
         <h4>Создать</h4>
       </div>
 
-       <form @submit.prevent="onSubmitCreateCategory"> <!-- TODO: логично тут добавить выбор даты, но будет неудобно для пользователя, слишком запарно -->
+       <form @submit.prevent="onSubmitCreateCategory">
         <div class="input-field">
           <input
               id="name"
@@ -74,7 +81,7 @@ export default {
               type="number"
               v-model.number="limit"
           >
-          <label for="limit">Лимит</label> <!-- TODO: тут у инпута должен быть какой-то шаг отличный от "1" -->
+          <label for="limit">Лимит</label>
           <span
             v-if="v$.limit.$dirty && v$.limit.minValue.$invalid"
             class="helper-text invalid"

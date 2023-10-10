@@ -1,18 +1,11 @@
 <script>
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useVuelidate } from '@vuelidate/core';
 import { required, minValue } from '@vuelidate/validators';
-import { mapActions } from 'vuex';
+import { useCategory } from '@/hooks/useCategory';
+import { useModal } from '@/hooks/useModal';
 
 export default {
-  setup() {
-    return { v$: useVuelidate() };
-  },
-  data: () => ({
-    categoryName: '',
-    limit: null,
-    currentCategoryId: null,
-    select: null,
-  }),
   props: {
     categories: {
       type: Array,
@@ -20,60 +13,79 @@ export default {
       default: () => ([]),
     },
   },
-  validations() {
-    return {
+  emits: ['update'],
+  setup(props, { emit }) {
+    const { updateCategory } = useCategory();
+    const { showMessageModal } = useModal();
+
+    const categorySelect = ref(null);
+    const categoryName = ref('');
+    const categoryLimit = ref(null);
+    const currentCategoryId = ref(null);
+    const select = ref(null);
+
+    const categoryLimitMin = ref(100);
+    const rules = computed(() => ({
       categoryName: { required },
-      limit: { minValue: minValue(100) },
-    };
-  },
-  methods: {
-    ...mapActions(['updateCategory']),
-    async onUpdateCategory() {
-      if (this.v$.$invalid) {
-        this.v$.$touch();
+      categoryLimit: { minValue: minValue(categoryLimitMin.value) },
+    }));
+    const v$ = useVuelidate(rules, { categoryName, categoryLimit });
+
+    const onUpdateCategory = async () => {
+      if (v$.value.$invalid) {
+        v$.value.$touch();
         return;
       }
 
-      try {
-        await this.updateCategory({
-          name: this.categoryName,
-          limit: this.limit,
-          id: this.currentCategoryId,
-        });
+      await updateCategory({
+        name: categoryName.value,
+        limit: categoryLimit.value,
+        id: currentCategoryId.value,
+      });
 
-        this.$emit('update', {
-          name: this.categoryName,
-          limit: this.limit,
-          id: this.currentCategoryId,
-        });
+      emit('update', {
+        name: categoryName.value,
+        limit: categoryLimit.value,
+        id: currentCategoryId.value,
+      });
 
-        this.$message('Категория обновлена');
-      } catch (e) {}
-    },
-  },
-  watch: {
-    currentCategoryId(categoryId) {
-      const { id, name, limit } = this.categories.find((c) => c.id === categoryId);
-      this.currentCategoryId = id;
-      this.categoryName = name;
-      this.limit = limit;
-    },
-  },
-  created() {
-    if (!this.categories.length) return;
-    const { id, name, limit } = this.categories[0]; // TODO: здесь не всегда по умолчанию нужно подставлять первый элемент
-    this.currentCategoryId = id;
-    this.categoryName = name;
-    this.limit = limit;
-  },
-  mounted() {
-    this.select = M.FormSelect.init(this.$refs.categorySelect);
-    M.updateTextFields();
-  },
-  unmounted() {
-    if (this.select && this.select.destroy) {
-      this.select.destroy();
+      showMessageModal('Категория обновлена');
+    };
+
+    onMounted(() => {
+      select.value = M.FormSelect.init(categorySelect.value);
+      M.updateTextFields();
+    });
+
+    onUnmounted(() => {
+      if (select.value && select.value.destroy) {
+        select.value.destroy();
+      }
+    });
+
+    watch(currentCategoryId, (categoryId) => {
+      const { id, name, limit } = props.categories.find((category) => category.id === categoryId);
+      currentCategoryId.value = id;
+      categoryName.value = name;
+      categoryLimit.value = limit;
+    });
+
+    if (props.categories.length) {
+      const [{ id, name, limit }] = props.categories;
+
+      currentCategoryId.value = id;
+      categoryName.value = name;
+      categoryLimit.value = limit;
     }
+
+    return {
+      categoryName,
+      categoryLimit,
+      categorySelect,
+      currentCategoryId,
+      onUpdateCategory,
+      v$,
+    };
   },
 };
 </script>
@@ -117,13 +129,13 @@ export default {
 
         <div class="input-field">
           <input
-              id="limit"
+              id="categoryLimit"
               type="number"
-              v-model.number="limit"
+              v-model.number="categoryLimit"
           >
-          <label for="limit">Лимит</label> <!-- TODO: тут у инпута должен быть шаг в сотню -->
+          <label for="categoryLimit">Лимит</label>
           <span
-            v-if="v$.limit.$dirty && v$.limit.minValue.$invalid"
+            v-if="v$.categoryLimit.$dirty && v$.categoryLimit.minValue.$invalid"
             class="helper-text invalid"
           >
             Минимальная величина: {{ v$.limit.minValue.$params.min }}

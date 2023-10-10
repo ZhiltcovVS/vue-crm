@@ -1,83 +1,108 @@
 <script>
-import { mapGetters, mapActions } from 'vuex';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useVuelidate } from '@vuelidate/core';
+import { useStore } from 'vuex';
 import { required, minValue } from '@vuelidate/validators';
+import { useCategory } from '@/hooks/useCategory';
+import { useRecord } from '@/hooks/useRecord';
+import { useModal } from '@/hooks/useModal';
 
 export default {
   setup() {
-    return { v$: useVuelidate() };
-  },
-  data: () => ({
-    categories: [],
-    loading: true,
-    select: null,
-    currentCategoryId: null,
-    type: 'outcome',
-    amount: null,
-    description: null,
-  }),
-  computed: {
-    ...mapGetters(['currentUserInfo']),
-  },
-  methods: {
-    ...mapActions(['fetchCategories', 'addNewRecord', 'updateUserInfo']),
-    async onSubmitRecordCreate() {
-      if (this.v$.$invalid) {
-        this.v$.$touch();
+    const { showErrorModal } = useModal();
+    const { fetchCategories } = useCategory();
+    const { addNewRecord } = useRecord();
+    const store = useStore();
+
+    const currentUserInfo = computed(() => store.getters.currentUserInfo);
+
+    const categorySelect = ref(null);
+    const categories = ref([]);
+    const loading = ref(true);
+    const select = ref(null);
+    const currentCategoryId = ref(null);
+    const type = ref('outcome');
+    const amount = ref(null);
+    const description = ref(null);
+
+    const amountMin = ref(1);
+    const rules = computed(() => ({
+      amount: {
+        required,
+        minValue: minValue(amountMin.value),
+      },
+      description: {
+        required,
+      },
+    }));
+    const v$ = useVuelidate(rules, { amount, description });
+
+    const onSubmitRecordCreate = async () => {
+      if (v$.value.$invalid) {
+        v$.value.$touch();
         return;
       }
 
-      if (this.type === 'outcome' && this.amount > this.currentUserInfo.bill) {
-        this.$message(`На счете не хватает: ${this.currentUserInfo.bill - this.amount}`);
+      if (type.value === 'outcome' && amount.value > currentUserInfo.value.bill) {
+        showErrorModal(`На счете не хватает: ${currentUserInfo.value.bill - amount.value}`);
         return;
       }
 
-      await this.addNewRecord({ // TODO: туn можно было бы создать recordId. Объект добавляется в сущность-связь record-category
-        categoryId: this.currentCategoryId,
-        type: this.type,
-        amount: this.amount,
-        description: this.description,
+      await addNewRecord({
+        categoryId: currentCategoryId.value,
+        type: type.value,
+        amount: amount.value,
+        description: description.value,
         createDt: new Date().toJSON(),
       });
 
-      const bill = this.type === 'outcome'
-        ? this.currentUserInfo.bill - this.amount
-        : this.currentUserInfo.bill + this.amount;
+      const bill = type.value === 'outcome'
+        ? currentUserInfo.value.bill - amount.value
+        : currentUserInfo.value.bill + amount.value;
 
-      await this.updateUserInfo({ ...this.currentUserInfo, bill });
+      await store.dispatch('updateUserInfo', { ...currentUserInfo.value, bill });
 
-      this.type = 'outcome';
-      this.amount = null;
-      this.description = null;
+      type.value = 'outcome';
+      amount.value = null;
+      description.value = null;
 
-      this.$message('Запись создана!');
-    },
-  },
-  validations() {
-    return {
-      amount: { required, minValue: minValue(1) },
-      description: { required },
+      showErrorModal('Запись создана!');
     };
-  },
-  async mounted() {
-    this.categories = await this.fetchCategories();
 
-    if (!this.categories.length) {
-      this.loading = false;
-      return;
-    }
-    this.currentCategoryId = this.categories[0].id;
-    this.loading = false;
+    onMounted(async () => {
+      categories.value = await fetchCategories();
 
-    setTimeout(() => {
-      this.select = M.FormSelect.init(this.$refs.categorySelect);
-      M.updateTextFields();
-    }, 0);
-  },
-  unmounted() {
-    if (this.select && this.select.destroy) {
-      this.select.destroy();
-    }
+      if (!categories.value.length) {
+        loading.value = false;
+        return;
+      }
+      currentCategoryId.value = categories.value[0].id;
+      loading.value = false;
+
+      setTimeout(() => {
+        select.value = M.FormSelect.init(categorySelect.value);
+        M.updateTextFields();
+      }, 0);
+    });
+
+    onUnmounted(() => {
+      if (select.value && select.value.destroy) {
+        select.value.destroy();
+      }
+    });
+
+    return {
+      categories,
+      loading,
+      currentCategoryId,
+      type,
+      amount,
+      description,
+      amountMin,
+      categorySelect,
+      onSubmitRecordCreate,
+      v$,
+    };
   },
 };
 </script>
@@ -105,10 +130,7 @@ export default {
               :value="c.id"
             >{{ c.name }}</option>
           </select>
-          <!-- TODO: Здесь нужно динамически определять список категорий в зависимости от типа -->
-          <!-- TODO: Для типа доход убрать возможность заполнять лимит и возможность редактирования  -->
-          <!-- TODO: Добавить возможность удалять категории, удалять записи из истории -->
-          <!-- TODO: Добавить сразу категории по дефолту -->
+
           <label>Выберите категорию</label>
 
         </div>

@@ -1,7 +1,9 @@
 <script>
+import { ref, computed, onMounted, watch } from 'vue';
+import { useStore } from 'vuex';
+import { useModal } from '@/hooks/useModal';
 import Navbar from '@/components/app/Navbar';
 import Sidebar from '@/components/app/Sidebar';
-import { mapGetters, mapActions } from 'vuex';
 import messages from '@/utils/messages';
 
 export default {
@@ -9,29 +11,24 @@ export default {
   components: {
     Navbar, Sidebar,
   },
-  data: () => ({
-    isOpen: true,
-    loading: true,
-  }),
-  computed: {
-    ...mapGetters(['currentUserInfo', 'error']),
-  },
-  watch: {
-    error(fbError) {
-      this.$error(messages[fbError.code] || 'Что-то пошло не так');
-    },
-  },
-  methods: {
-    ...mapActions(['fetchUserInfo']),
-  },
-  async mounted() {
-    if (!Object.keys(this.currentUserInfo).length) {
-      try {
-        await this.fetchUserInfo();
-      } catch (e) {} finally {
-        this.loading = false;
-      }
-    }
+  setup() {
+    const store = useStore();
+    const { showErrorModal } = useModal();
+    const error = computed(() => store.getters.error);
+
+    const isOpen = ref(true);
+    const loading = ref(true);
+
+    watch(error, (fbError) => {
+      showErrorModal(messages[fbError.code] || 'Что-то пошло не так');
+    });
+
+    onMounted(async () => {
+      await store.dispatch('fetchUserInfo');
+      loading.value = false;
+    });
+
+    return { isOpen, loading };
   },
 };
 

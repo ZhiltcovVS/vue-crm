@@ -1,42 +1,37 @@
 <script>
+import { ref, computed, onMounted } from 'vue';
 import { useVuelidate } from '@vuelidate/core';
 import { required } from '@vuelidate/validators';
-import { mapGetters, mapActions } from 'vuex';
+import { useStore } from 'vuex';
 
 export default {
-  name: 'Profile',
   setup() {
-    return { v$: useVuelidate() };
-  },
-  validations() {
-    return {
+    const store = useStore();
+    const currentUserInfo = computed(() => store.getters.currentUserInfo);
+
+    const name = ref('');
+
+    const rules = computed(() => ({
       name: { required },
-    };
-  },
-  data: () => ({
-    name: '',
-  }),
-  computed: {
-    ...mapGetters(['currentUserInfo']),
-  },
-  methods: {
-    ...mapActions(['updateUserInfo']),
-    onSubmit() {
-      if (this.v$.$invalid) {
-        this.v$.$touch();
+    }));
+    const v$ = useVuelidate(rules, { name });
+
+    const onSubmit = async () => {
+      if (v$.value.$invalid) {
+        v$.value.$touch();
         return;
       }
+      await store.dispatch('updateUserInfo', { name: name.value });
+    };
 
-      try {
-        this.updateUserInfo({ name: this.name });
-      } catch (e) {}
-    },
-  },
-  mounted() {
-    this.name = this.currentUserInfo.name;
-    setTimeout(() => {
-      M.updateTextFields();
+    onMounted(() => {
+      name.value = currentUserInfo.value.name;
+      setTimeout(() => {
+        M.updateTextFields();
+      });
     });
+
+    return { name, v$, onSubmit };
   },
 };
 </script>

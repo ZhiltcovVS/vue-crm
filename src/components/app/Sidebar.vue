@@ -1,19 +1,20 @@
 <script>
 export default {
-  name: 'Sidebar',
-  data: () => ({
-    links: [
+  props: {
+    isOpen: {
+      type: Boolean,
+    },
+  },
+  setup() {
+    const links = [
       { id: 1, title: 'Счет', url: '/', exact: true },
       { id: 2, title: 'История', url: '/history' },
       { id: 3, title: 'Планирование', url: '/planning' },
       { id: 4, title: 'Новая запись', url: '/record' },
       { id: 5, title: 'Категории', url: '/categories' },
-    ],
-  }),
-  props: {
-    isOpen: {
-      type: Boolean,
-    },
+    ];
+
+    return { links };
   },
 };
 </script>
