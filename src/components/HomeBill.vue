@@ -1,5 +1,7 @@
 <script>
-import { mapGetters } from 'vuex';
+import { computed } from 'vue';
+import { useStore } from 'vuex';
+import filters from '@/utils/filters';
 
 export default {
   props: {
@@ -12,16 +14,14 @@ export default {
       default: () => ([]),
     },
   },
-  computed: {
-    ...mapGetters(['currentUserInfo']),
-    base() { // TODO: переназвать. База это считается код валюты относительно которого рассчитываются остальные коэффициенты. Это не база
-      return this.currentUserInfo.bill / this.rates.RUB;
-    },
-  },
-  methods: {
-    getCurrency(currencyCode) { // TODO: сомнительное название для этого метода. Непонятно вообще что он делает
-      return Math.floor(this.base * this.rates[currencyCode]);
-    },
+  setup({ rates }) {
+    const store = useStore();
+    const currentUserInfo = computed(() => store.getters.currentUserInfo);
+
+    const base = computed(() => currentUserInfo.value.bill / rates.RUB);
+    const getCurrency = (currencyCode) => Math.floor(base.value * rates[currencyCode]);
+
+    return { filters, getCurrency };
   },
 };
 </script>
@@ -32,7 +32,7 @@ export default {
       <div class="card-content white-text">
         <span class="card-title">Счет в валюте</span>
         <p class="currency-line" v-for="code in currencyCodes" :key="code">
-          <span>{{ $filters.currencyFormatter(getCurrency(code), code) }}</span>
+          <span>{{ filters.currencyFormatter(getCurrency(code), code) }}</span>
         </p>
       </div>
     </div>

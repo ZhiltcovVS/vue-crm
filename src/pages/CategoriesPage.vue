@@ -1,30 +1,34 @@
 <script>
+import { ref, onMounted } from 'vue';
 import CategoryCreate from '@/components/CategoryCreate';
 import CategoryEdit from '@/components/CategoryEdit';
-import { mapActions } from 'vuex';
+import { useCategory } from '@/hooks/useCategory';
 
 export default {
   components: {
     CategoryCreate, CategoryEdit,
   },
-  data: () => ({
-    categories: [], // TODO: лучше перенести категории в store
-    loading: true,
-    updateCount: 0,
-  }),
-  methods: {
-    ...mapActions(['fetchCategories']),
-    async onUpdateCategory(updatedCategory) {
-      this.categories = await this.fetchCategories();
-      this.updateCount++;
-    },
-    async onAddCategory() {
-      this.categories = await this.fetchCategories();
-    },
-  },
-  async mounted() {
-    this.categories = await this.fetchCategories() || [];
-    this.loading = false;
+  setup() {
+    const { fetchCategories } = useCategory();
+    const categories = ref([]);
+    const loading = ref(true);
+    const updateCount = ref(0);
+
+    const onUpdateCategory = async () => {
+      categories.value = await fetchCategories();
+      updateCount.value++;
+    };
+
+    const onAddCategory = async () => {
+      categories.value = await fetchCategories();
+    };
+
+    onMounted(async () => {
+      categories.value = await fetchCategories() || [];
+      loading.value = false;
+    });
+
+    return { categories, loading, onUpdateCategory, onAddCategory };
   },
 };
 </script>

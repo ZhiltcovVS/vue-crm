@@ -1,16 +1,19 @@
 <script>
+import { computed, watch } from 'vue';
 import messages from '@/utils/messages';
-import { mapGetters } from 'vuex';
+import { useStore } from 'vuex';
+import { useModal } from '@/hooks/useModal';
 
 export default {
   name: 'EmptyLayout',
-  computed: {
-    ...mapGetters(['error']),
-  },
-  watch: {
-    error(fbError) {
-      this.$error(messages[fbError.code] || 'Что-то пошло не так');
-    },
+  setup() {
+    const store = useStore();
+    const { showErrorModal } = useModal();
+    const error = computed(() => store.getters.error);
+
+    watch(error, (fbError) => {
+      showErrorModal(messages[fbError.code] || 'Что-то пошло не так');
+    });
   },
 };
 </script>

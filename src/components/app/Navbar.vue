@@ -1,39 +1,45 @@
 <script>
-import { mapGetters, mapActions } from 'vuex';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { useAuth } from '@/hooks/useAuth';
+import { useStore } from 'vuex';
+import { useRouter } from 'vue-router';
+import filters from '@/utils/filters';
 
 export default {
-  name: 'Navbar',
-  data: () => ({
-    date: new Date(),
-    interval: null,
-    dropdown: null,
-  }),
-  computed: {
-    ...mapGetters(['currentUserInfo']),
-    currentUserName() {
-      return this.currentUserInfo.name;
-    },
-  },
-  methods: {
-    ...mapActions(['logout']),
-    onClickLogout() {
-      this.logout();
-      this.$router.push('/login?message=logout');
-    },
-  },
-  mounted() {
-    this.interval = setInterval(() => {
-      this.date = new Date();
-    }, 1000);
-    this.dropdown = window.M.Dropdown.init(this.$refs.dropdown, {
-      constrainWidth: true,
+  setup() {
+    const { logout } = useAuth();
+    const router = useRouter();
+    const store = useStore();
+    const currentUserInfo = computed(() => store.getters.currentUserInfo);
+
+    const date = ref(new Date());
+    const interval = ref(null);
+    const dropdownRef = ref(null);
+    const dropdown = ref(null);
+
+    const onClickLogout = () => {
+      logout();
+      router.push('/login?message=logout');
+    };
+
+    onMounted(() => {
+      interval.value = setInterval(() => {
+        date.value = new Date();
+      }, 1000);
+
+      dropdownRef.value = window.M.Dropdown.init(dropdown.value, {
+        constrainWidth: true,
+      });
     });
-  },
-  beforeUnmount() {
-    clearInterval(this.interval);
-    if (this.dropdown && this.dropdown.destroy) {
-      this.dropdown.destroy();
-    }
+
+    onBeforeUnmount(() => {
+      clearInterval(interval.value);
+      if (dropdownRef.value && dropdownRef.value.destroy) {
+        dropdownRef.value.destroy();
+      }
+    });
+
+    return { date, currentUserInfo, dropdown, filters, onClickLogout };
   },
 };
 </script>
@@ -46,7 +52,7 @@ export default {
           <a href="#" @click.prevent="$emit('onClick')">
             <i class="material-icons black-text">dehaze</i>
           </a>
-          <span class="black-text">{{ $filters.dateFormatter(date, 'datetime') }}</span>
+          <span class="black-text">{{ filters.dateFormatter(date, 'datetime') }}</span>
         </div>
 
         <ul class="right hide-on-small-and-down">
@@ -57,7 +63,7 @@ export default {
                 href="#"
                 data-target="dropdown"
             >
-              {{ currentUserName }}
+              {{ currentUserInfo.name }}
               <i class="material-icons right">arrow_drop_down</i>
             </a>
 

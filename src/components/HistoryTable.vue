@@ -6,6 +6,10 @@ export default {
       required: true,
     },
   },
+  setup() {
+    const headers = ['#', 'Тип', 'Категория', 'Сумма', 'Изменено', 'Открыть'];
+    return { headers };
+  },
 };
 </script>
 
@@ -13,12 +17,9 @@ export default {
   <table>
     <thead>
     <tr>
-      <th>#</th>
-      <th>Тип</th>  <!-- TODO: вместо badge здесь можно было бы сделать иконку - цветная стрелочка вниз или вверх -->
-      <th>Категория</th>
-      <th>Сумма</th>
-      <th>Изменено</th>
-      <th>Открыть</th>
+      <th v-for="(header,index) in headers" :key="index">
+        {{ header }}
+      </th>
     </tr>
     </thead>
 
